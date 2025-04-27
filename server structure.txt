@@ -1,0 +1,30 @@
+server/
+├── config/
+│   ├── db.js
+│   └── config.js
+├── controllers/
+│   ├── authController.js
+│   ├── salesController.js
+│   ├── targetsController.js
+│   ├── usersController.js
+│   └── settingsController.js
+├── middleware/
+│   ├── auth.js
+│   ├── errorHandler.js
+│   └── rbac.js
+├── models/
+│   ├── User.js
+│   ├── Sale.js
+│   ├── Target.js
+│   └── Setting.js
+├── routes/
+│   ├── auth.js
+│   ├── sales.js
+│   ├── targets.js
+│   ├── users.js
+│   └── settings.js
+├── utils/
+│   ├── logger.js
+│   └── validators.js
+├── package.json
+└── server.js

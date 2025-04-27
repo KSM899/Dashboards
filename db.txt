@@ -1,0 +1,154 @@
+-- Users and authentication
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL CHECK (role IN ('admin', 'manager', 'viewer')),
+    status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+    last_login TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Sales units (regions)
+CREATE TABLE sales_units (
+    id VARCHAR(20) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    manager_id INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Product categories
+CREATE TABLE categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Products/Materials
+CREATE TABLE products (
+    id VARCHAR(20) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    category_id INTEGER REFERENCES categories(id),
+    description TEXT,
+    unit_code VARCHAR(10),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Customers
+CREATE TABLE customers (
+    id VARCHAR(20) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(50),
+    contact_person VARCHAR(100),
+    email VARCHAR(100),
+    phone VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Sales transactions
+CREATE TABLE sales (
+    invoice_id VARCHAR(50) PRIMARY KEY,
+    company_id VARCHAR(20) NOT NULL,
+    tax_country_code VARCHAR(10),
+    tax_code VARCHAR(20),
+    customer_id VARCHAR(20) REFERENCES customers(id),
+    date DATE NOT NULL,
+    sales_unit_id VARCHAR(20) REFERENCES sales_units(id),
+    site_id VARCHAR(20),
+    logistics_area VARCHAR(50),
+    type VARCHAR(10),
+    material_id VARCHAR(20) REFERENCES products(id),
+    adg VARCHAR(50),
+    quantity INTEGER NOT NULL,
+    identified_stock_id VARCHAR(50),
+    currency VARCHAR(10) NOT NULL,
+    unit_code VARCHAR(10),
+    price DECIMAL(15,2) NOT NULL,
+    discount DECIMAL(15,2) DEFAULT 0,
+    freight DECIMAL(15,2) DEFAULT 0,
+    item_net DECIMAL(15,2) NOT NULL,
+    item_tax DECIMAL(15,2) NOT NULL,
+    item_gross DECIMAL(15,2) NOT NULL,
+    total_net_per_invoice DECIMAL(15,2),
+    total_tax_per_invoice DECIMAL(15,2),
+    total_gross_per_invoice DECIMAL(15,2),
+    sales_rep_id INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Sales targets
+CREATE TABLE targets (
+    id SERIAL PRIMARY KEY,
+    target_type VARCHAR(50) NOT NULL, -- 'monthly', 'quarterly', 'yearly', 'category', 'region', 'rep'
+    target_id VARCHAR(50) NOT NULL, -- Identifier for what this target applies to
+    period_start DATE,
+    period_end DATE,
+    target_value DECIMAL(15,2) NOT NULL,
+    currency VARCHAR(10) DEFAULT 'OMR',
+    created_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (target_type, target_id, period_start, period_end)
+);
+
+-- User settings/preferences
+CREATE TABLE settings (
+    user_id INTEGER REFERENCES users(id),
+    setting_key VARCHAR(100) NOT NULL,
+    setting_value JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, setting_key)
+);
+
+-- System-wide settings
+CREATE TABLE system_settings (
+    key VARCHAR(100) PRIMARY KEY,
+    value JSONB,
+    description TEXT,
+    modified_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Logs for important actions
+CREATE TABLE activity_logs (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    action VARCHAR(255) NOT NULL,
+    entity_type VARCHAR(50), -- 'user', 'sales', 'target', etc.
+    entity_id VARCHAR(50),   -- ID of the affected entity
+    details JSONB,
+    ip_address VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Report templates
+CREATE TABLE report_templates (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    type VARCHAR(50) NOT NULL,
+    filters JSONB,
+    created_by INTEGER REFERENCES users(id),
+    last_run TIMESTAMP,
+    schedule VARCHAR(50), -- 'daily', 'weekly', 'monthly', null for manual
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add indexes for better performance
+CREATE INDEX idx_sales_date ON sales(date);
+CREATE INDEX idx_sales_customer_id ON sales(customer_id);
+CREATE INDEX idx_sales_material_id ON sales(material_id);
+CREATE INDEX idx_sales_sales_unit_id ON sales(sales_unit_id);
+CREATE INDEX idx_targets_target_type ON targets(target_type, target_id);
